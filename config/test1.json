@@ -1,0 +1,52 @@
+{
+    "name": "test1",
+    "desc": "Test 1 - Standard Config",
+    "result_dir": "./results/",
+    "cuda": true,
+    "device_ids": [0],
+    "epochs": 1000,
+    "resume": false,
+    "save_freq": 1,
+    "verbosity": 0,
+    "seed": 999,
+    "trainer": "DefaultTrainer",
+    "loss": "binary_crossentropy",
+    "metrics": ["binary_accuracy"],
+    "datasets": {
+        "train": {
+          "type": "SiameseDataset",
+          "data_path": "datasets/train",
+          "batch_size": 32,
+          "shuffle": true,
+          "augment": false,
+          "workers": 4
+        },
+        "validation": {
+          "type": "SiameseDataset",
+          "data_path": "datasets/val",
+          "batch_size": 32,
+          "shuffle": false,
+          "augment": false,
+          "workers": 1
+        }
+    },
+    "optimizer": {
+        "type": "Adam",
+        "lr": 0.001,
+        "decay": 0
+    },
+    "scheduler": {
+        "type": "cyclic_linear",
+        "max_lr": 1e-3,
+        "min_lr": 1e-6,
+        "period": 5
+    },
+    "monitor": {
+        "min": "val_loss",
+        "early_stop": true
+    },
+    "model": {
+        "type": "PseudoSiamese",
+        "ensamble": "SWA"
+    }
+}
