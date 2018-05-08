@@ -10,6 +10,7 @@
     "verbosity": 0,
     "seed": 999,
     "trainer": "DefaultTrainer",
+    "logger": "VisdomLogger",
     "loss": "binary_crossentropy",
     "metrics": ["binary_accuracy"],
     "datasets": {
