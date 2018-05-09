@@ -9,17 +9,13 @@ from torch.utils.data import DataLoader
 #     return data_loaders[name](config)
 
 def create_dataset(config):
-    data_sets = get_modules(['./datasets'])
-    name = config.type
-    assert name in data_sets.keys(), "Could not find a {} dataset type".format(name)
-    return data_sets[name](config)
+    dataset = get_module('./datasets', config.type)
+    return dataset(config)
 
 def build_model(config):
-    models = get_modules(['./models'])
-    name = config.type
-    assert name in models.keys(), "Could not find model {}".format(name)
+    model = get_modules('./models', config.type)
     del config.type
-    return models[name](**config.toDict())
+    return model(**config.toDict())
 
 def get_data_loader(dset, config):
     return DataLoader(dset, batch_size=config.batch_size, shuffle=config.shuffle, num_workers=config.workers)

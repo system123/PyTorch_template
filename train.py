@@ -5,6 +5,9 @@ from argparse import ArgumentParser
 import torch
 from torch.utils.data import DataLoader
 
+from ignite.engine.engine import Engine, State, Events
+from ignite._utils import convert_tensor
+
 from experiment import Experiment
 from utils.factory import *
 from utils.lr_scheduler import *
@@ -52,6 +55,9 @@ def main(config):
     if dset_val is not None:
         loader_val = get_data_loader(dset_val, config_val)
 
+
+    train(model, opt, lr_scheduler, loss, metrics, train_loader, val_loader)
+
     Create_lr_scheduler_funciton
     Create the optimizer
     Create the model
@@ -59,6 +65,10 @@ def main(config):
     Create the metrics
     Create the trainer core - pass it the optimizer, model,
     Register callbacks
+
+
+
+    trainer.run(loader_train)
 
     # Save the config for this experiment to the results directory, once we know the params are good
     # config.save()

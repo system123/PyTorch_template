@@ -11,9 +11,15 @@ def get_modules(path):
             # Only import classes we defined
             if not inspect.isclass(value) or value.__module__ is not module.__name__:
                 continue
+
             modules[name] = value
 
     return modules
+
+def get_module(path, name):
+    modules = get_modules([path])
+    assert name in modules.keys(), "Could not find module {}".format(name)
+    return modules[name]
 
 def __classname_to_modulename(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)

@@ -9,7 +9,7 @@
     "save_freq": 1,
     "verbosity": 0,
     "seed": 999,
-    "trainer": "DefaultTrainer",
+    "trainer": "DefaultSiameseTrainer",
     "logger": "VisdomLogger",
     "loss": "binary_crossentropy",
     "metrics": ["binary_accuracy"],
