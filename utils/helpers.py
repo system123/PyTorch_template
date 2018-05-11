@@ -9,12 +9,19 @@ def get_modules(path):
         module = loader.find_module(name).load_module(name)
         for name, value in inspect.getmembers(module):
             # Only import classes we defined
-            if not inspect.isclass(value) or value.__module__ is not module.__name__:
+            if inspect.isclass(value) is False or value.__module__ is not module.__name__:
                 continue
 
             modules[name] = value
 
     return modules
+
+def get_function(module, fcn):
+    try:
+        fn = str_to_class(module, fcn)
+    except:
+        fn = None
+    return fn
 
 def get_module(path, name):
     modules = get_modules([path])
@@ -25,13 +32,18 @@ def __classname_to_modulename(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
-def __str_to_class(module_name, class_name):
+def str_to_class(module_name, class_name):
     try:
         module_ = importlib.import_module(module_name)
+        print(module_)
         try:
-            class_ = getattr(module_, class_name)()
+            class_ = getattr(module_, class_name)
         except AttributeError:
             logging.error('Class does not exist')
     except ImportError:
         logging.error('Module does not exist')
     return class_ or None
+
+def check_if_implemented(obj, fcn):
+    op = getattr(obj, fcn, None)
+    return callable(op)

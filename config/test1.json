@@ -2,17 +2,21 @@
     "name": "test1",
     "desc": "Test 1 - Standard Config",
     "result_dir": "./results/",
-    "cuda": true,
+    "device": "cuda",
     "device_ids": [0],
     "epochs": 1000,
     "resume": false,
     "save_freq": 1,
     "verbosity": 0,
     "seed": 999,
-    "trainer": "DefaultSiameseTrainer",
+    "trainer": "DefaultTrainer",
     "logger": "VisdomLogger",
     "loss": "binary_crossentropy",
-    "metrics": ["binary_accuracy"],
+    "metrics": [{
+        "acc": "binary_accuracy",
+        "precision": "precision",
+        "loss": "binary_crossentropy"
+        }],
     "datasets": {
         "train": {
           "type": "SiameseDataset",
@@ -34,13 +38,13 @@
     "optimizer": {
         "type": "Adam",
         "lr": 0.001,
-        "decay": 0
+        "betas": [0.9, 0.999]
     },
     "scheduler": {
-        "type": "cyclic_linear",
-        "max_lr": 1e-3,
-        "min_lr": 1e-6,
-        "period": 5
+        "type": "ReduceLROnPlateau",
+        "factor": 0.1,
+        "patience": 10,
+        "min_lr": 1e-8
     },
     "monitor": {
         "min": "val_loss",

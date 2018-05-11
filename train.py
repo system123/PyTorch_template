@@ -8,9 +8,8 @@ from torch.utils.data import DataLoader
 from ignite.engine.engine import Engine, State, Events
 from ignite._utils import convert_tensor
 
-from experiment import Experiment
+from utils import Experiment
 from utils.factory import *
-from utils.lr_scheduler import *
 
 logging.basicConfig(level=logging.INFO, format='')
 logger = logging.getLogger()
@@ -56,74 +55,58 @@ def main(config):
         loader_val = get_data_loader(dset_val, config_val)
 
 
-    train(model, opt, lr_scheduler, loss, metrics, train_loader, val_loader)
+    model = build_model(config.model)
+    model = model.to(config.device)
 
-    Create_lr_scheduler_funciton
-    Create the optimizer
-    Create the model
-    Create the loss - if more than one loss then we need to add all the losses and everything to the training function
-    Create the metrics
-    Create the trainer core - pass it the optimizer, model,
-    Register callbacks
+    optimizer = get_optimizer(model.parameters(), config.optimizer)
 
+    loss_fn = get_loss(config.loss)
+    assert loss, "Loss function {} could not be found, please check your config".format(config.loss)
 
+    scheduler = None
+    if 'scheduler' in config:
+        scheduler = get_lr_scheduler(optimizer, config.scheduler)
+        assert scheduler, "Learning Rate scheduler function {} could not be found, please check your config".format(config.scheduler.type)
 
-    trainer.run(loader_train)
+    if 'logger' in config:
+        exp_logger = get_experiment_logger(config)
+
+    trainer = get_trainer(model, optimizer, loss_fn, exp_logger, config)
+
+    trainer_engine = Engine(trainer.train)
+    evaluator_engine = Engine(trainer.evaluate)
+
+    # Register default callbacks
+    if exp_logger is not None:
+        trainer_engine.add_event_handler(Events.ITERATION_COMPLETED, exp_logger.log_iteration, phase="train")
+        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, exp_logger.log_epoch, phase="train")
+        evaluator_engine.add_event_handler(Events.ITERATION_COMPLETED, exp_logger.log_iteration, phase="evaluate")
+        evaluator_engine.add_event_handler(Events.EPOCH_COMPLETED, exp_logger.log_epoch, phase="evaluate")
+
+    if loader_val is not None:
+        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, lambda engine: evaluator_engine.run(loader_val))
+
+    if scheduler is not None:
+        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, lambda engine: scheduler.step())
+
+    # Register custom callbacks with the engines
+    if check_if_implemented(trainer, "on_iteration_start"):
+        trainer_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_iteration_start)
+        evaluator_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_iteration_start)
+    if check_if_implemented(trainer, "on_iteration_end"):
+        trainer_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_iteration_end)
+        evaluator_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_iteration_end)
+    if check_if_implemented(trainer, "on_epoch_start"):
+        trainer_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_epoch_start)
+        evaluator_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_epoch_start)
+    if check_if_implemented(trainer, "on_epoch_end"):
+        trainer_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_epoch_end)
+        evaluator_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_epoch_end)
+
+    trainer_engine.run(loader_train, max_epochs=config.epochs)
 
     # Save the config for this experiment to the results directory, once we know the params are good
     # config.save()
-
-    pass
-
-
-def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
-    vis = visdom.Visdom()
-    if not vis.check_connection():
-        raise RuntimeError("Visdom server not running. Please run python -m visdom.server")
-
-    train_loader, val_loader = get_data_loaders(train_batch_size, val_batch_size)
-    model = Net()
-    device = 'cpu'
-
-    if torch.cuda.is_available():
-        device = 'cuda'
-        model = model.to(device)
-
-    optimizer = SGD(model.parameters(), lr=lr, momentum=momentum)
-    trainer = create_supervised_trainer(model, optimizer, F.nll_loss, device=device)
-    evaluator = create_supervised_evaluator(model,
-                                            metrics={'accuracy': CategoricalAccuracy(),
-                                                     'nll': Loss(F.nll_loss)},
-                                            device=device)
-
-    train_loss_window = create_plot_window(vis, '#Iterations', 'Loss', 'Training Loss')
-    val_accuracy_window = create_plot_window(vis, '#Epochs', 'Accuracy', 'Validation Accuracy')
-    val_loss_window = create_plot_window(vis, '#Epochs', 'Loss', 'Validation Loss')
-
-    @trainer.on(Events.ITERATION_COMPLETED)
-    def log_training_loss(engine):
-        iter = (engine.state.iteration - 1) % len(train_loader) + 1
-        if iter % log_interval == 0:
-            print("Epoch[{}] Iteration[{}/{}] Loss: {:.2f}"
-                  "".format(engine.state.epoch, iter, len(train_loader), engine.state.output))
-            vis.line(X=np.array([engine.state.iteration]),
-                     Y=np.array([engine.state.output]),
-                     update='append', win=train_loss_window)
-
-    @trainer.on(Events.EPOCH_COMPLETED)
-    def log_validation_results(engine):
-        evaluator.run(val_loader)
-        metrics = evaluator.state.metrics
-        avg_accuracy = metrics['accuracy']
-        avg_nll = metrics['nll']
-        print("Validation Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}"
-              .format(engine.state.epoch, avg_accuracy, avg_nll))
-        vis.line(X=np.array([engine.state.epoch]), Y=np.array([avg_accuracy]), win=val_accuracy_window, update='append')
-        vis.line(X=np.array([engine.state.epoch]), Y=np.array([avg_nll]), win=val_loss_window, update='append')
-
-    # kick everything off
-    trainer.run(train_loader, max_epochs=epochs)
-
 
 if __name__ == "__main__":
     parser = ArgumentParser()
