@@ -3,7 +3,9 @@
     "desc": "Test 1 - Standard Config",
     "result_dir": "./results/",
     "device": "cpu",
-    "device_ids": [0],
+    "device_ids": [
+        0
+    ],
     "epochs": 1000,
     "resume": false,
     "save_freq": 1,
@@ -12,39 +14,44 @@
     "trainer": "DefaultTrainer",
     "logger": "VisdomLogger",
     "loss": "binary_crossentropy",
-    "metrics": [{
-        "acc": "binary_accuracy",
-        "precision": "precision",
-        "loss": "binary_crossentropy"
-        }],
+    "metrics": [
+        {
+            "acc": "binary_accuracy",
+            "precision": "precision",
+            "loss": "binary_crossentropy"
+        }
+    ],
     "datasets": {
         "train": {
-          "type": "SiameseDataset",
-          "data_path": "datasets/train",
-          "batch_size": 32,
-          "shuffle": true,
-          "augment": false,
-          "workers": 4
+            "type": "SiameseDataset",
+            "data_path": "datasets/val",
+            "batch_size": 32,
+            "shuffle": false,
+            "augment": false,
+            "workers": 1
         },
         "validation": {
-          "type": "SiameseDataset",
-          "data_path": "datasets/val",
-          "batch_size": 32,
-          "shuffle": false,
-          "augment": false,
-          "workers": 1
+            "type": "SiameseDataset",
+            "data_path": "datasets/val",
+            "batch_size": 32,
+            "shuffle": false,
+            "augment": false,
+            "workers": 1
         }
     },
     "optimizer": {
         "type": "Adam",
         "lr": 0.001,
-        "betas": [0.9, 0.999]
+        "betas": [
+            0.9,
+            0.999
+        ]
     },
     "scheduler": {
         "type": "ReduceLROnPlateau",
         "factor": 0.1,
         "patience": 10,
-        "min_lr": 1e-8
+        "min_lr": 1e-08
     },
     "monitor": {
         "early_stopping": true,
@@ -55,5 +62,6 @@
     "model": {
         "type": "PseudoSiamese",
         "ensamble": "SWA"
-    }
+    },
+    "result_path": "./results/test1"
 }

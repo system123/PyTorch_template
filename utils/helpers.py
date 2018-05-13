@@ -2,6 +2,11 @@ import importlib
 import pkgutil
 import inspect
 
+def copy_and_delete(d, key):
+    copy = d.copy()
+    del copy[key]
+    return(copy)
+
 def get_modules(path):
     modules = {}
 
@@ -13,7 +18,7 @@ def get_modules(path):
                 continue
 
             modules[name] = value
-
+            
     return modules
 
 def get_function(module, fcn):
@@ -35,7 +40,6 @@ def __classname_to_modulename(name):
 def str_to_class(module_name, class_name):
     try:
         module_ = importlib.import_module(module_name)
-        print(module_)
         try:
             class_ = getattr(module_, class_name)
         except AttributeError:
@@ -47,3 +51,9 @@ def str_to_class(module_name, class_name):
 def check_if_implemented(obj, fcn):
     op = getattr(obj, fcn, None)
     return callable(op)
+
+def get_if_implemented(obj, fcn):
+    op = getattr(obj, fcn, None)
+    if not callable(op):
+        op = None
+    return op

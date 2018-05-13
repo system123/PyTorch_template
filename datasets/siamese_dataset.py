@@ -15,7 +15,7 @@ class SiameseDataset(Dataset):
 
     def __getitem__(self, index):
         x1 = x2 = y = 5
-        return (x1, x2, y)
+        return (x2, y)
 
     def __len__(self):
         count = 100

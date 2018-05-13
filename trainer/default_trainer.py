@@ -1,7 +1,7 @@
 from ignite.engine.engine import Engine, State, Events
 from ignite._utils import convert_tensor
 
-class BaseTrainer:
+class DefaultTrainer:
     def __init__(self, model, optimizer, loss_fn, logger, config):
         self.model = model
         self.optimizer = optimizer
@@ -25,16 +25,16 @@ class BaseTrainer:
         self.optimizer.step()
         return loss.item()
 
-    def on_epoch_start(self, engine):
+    def on_epoch_start(self, engine, phase=None):
         pass
 
-    def on_epoch_end(self, engine):
+    def on_epoch_end(self, engine, phase=None):
         pass
 
-    def on_iteration_start(self, engine):
+    def on_iteration_start(self, engine, phase=None):
         pass
 
-    def on_iteration_end(self, engine):
+    def on_iteration_end(self, engine, phase=None):
         pass
 
     def evaluate(self, engine, batch):
