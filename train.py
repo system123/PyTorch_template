@@ -78,7 +78,7 @@ def main(config):
         optimizer.load_state_dict(torch.load( o_cp_path ))
 
     loss_fn = get_loss(config.loss)
-    assert loss, "Loss function {} could not be found, please check your config".format(config.loss)
+    assert loss_fn, "Loss function {} could not be found, please check your config".format(config.loss)
 
     scheduler = None
     if 'scheduler' in config:
@@ -95,6 +95,14 @@ def main(config):
 
     trainer_engine = Engine(trainer.train)
     evaluator_engine = Engine(trainer.evaluate)
+
+    if 'metrics' in config:
+        for name, metric in config.metrics.items():
+            metric = get_metric(metric)
+            if metric is not None:
+                metric.attach(evaluator_engine, name)
+            else:
+                logger.warning("WARNING: Metric {} could not be created".format(name))
 
     # Register default callbacks
     if exp_logger is not None:
@@ -146,14 +154,19 @@ if __name__ == "__main__":
 
     config = Experiment.load_from_path(args.config)
 
+    assert config, "Config could not be loaded."
+
+    # Else load the saved config from the results dir or throw an error if one doesn't exist
     if config.resume_from >= 0:
         logger.warning("WARNING: --config specifies resuming, overriding config with exising experiment.")
         resume_config = Experiment(config.name, desc=config.desc, result_dir=config.result_dir).load()
         assert resume_config is not None, "No experiment {} exists, cannot resume training".format(config.name)
         config = resume_config
-    elif config is not None:
+        assert config, "Config could not be loaded for resume"
+    # If we have resume_from in the config but have it < 0 to start a fresh training run then throw an error if the directory already exists
+    elif config.overwrite is False:
         assert not config.exists(), "Results directory {} already exists! Please specify a new experiment name or the remove old files.".format(config.result_path)
-
-    assert config is not None
+    else:
+        empty_folder(config.result_path)
 
     main(config)

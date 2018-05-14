@@ -6,17 +6,18 @@
     "device_ids": [0],
     "epochs": 1000,
     "resume_from": -1,
+    "overwrite": true,
     "save_freq": 1,
     "verbosity": 0,
     "seed": 999,
     "trainer": "DefaultTrainer",
     "logger": "VisdomLogger",
-    "loss": "binary_crossentropy",
-    "metrics": [{
-        "acc": "binary_accuracy",
-        "precision": "precision",
-        "loss": "binary_crossentropy"
-        }],
+    "loss": "binary_cross_entropy",
+    "metrics": {
+        "acc": "BinaryAccuracy",
+        "precision": "Precision",
+        "loss": "binary_cross_entropy"
+        },
     "datasets": {
         "train": {
           "type": "SiameseDataset",
@@ -41,7 +42,7 @@
         "betas": [0.9, 0.999]
     },
     "scheduler": {
-        "type": "ReduceLROnPlateau",
+        "type": "custom_scheduler",
         "factor": 0.1,
         "patience": 10,
         "min_lr": 1e-8

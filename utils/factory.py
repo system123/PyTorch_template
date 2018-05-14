@@ -1,8 +1,8 @@
 from .helpers import *
 from torch.utils.data import DataLoader
-from ignite.metrics import *
+import ignite.metrics
 import torch.nn.functional as F
-import torch.optim.lr_scheduler as lr_schedulers
+import torch.optim.lr_scheduler
 
 # Deprecated
 # def create_data_loader(config):
@@ -36,33 +36,48 @@ def get_experiment_logger(config):
     logger = get_module('./logger', config.logger)
     return logger(config) or None
 
+def get_metric(name):
+    metric = get_if_implemented(ignite.metrics, name)
+
+    if metric is None:
+        try:
+            metric = get_module('./metrics', config.logger)
+        except:
+            pass
+
+    if metric is None:
+        loss_fcn = get_loss(name)
+        assert loss_fcn, "No loss function {} was found for use as a metric".format(name)
+        metric = ignite.metrics.Loss(loss_fcn)
+    else:
+        metric = metric()
+
+    return metric or None
+
 def get_loss(loss_fn):
     loss = get_if_implemented(F, loss_fn)
     if loss is None:
-        loss = get_function('./functional.losses', loss_fn)
+        loss = get_function('losses.functional', loss_fn)
     return loss
 
 def get_lr_scheduler(optimizer, config):
     name = config.type
     args = copy_and_delete(config.toDict(), 'type')
 
-    lr_scheduler = get_if_implemented(lr_schedulers, name)
-    # lr_scheduler = str_to_class('torch.optim.lr_scheduler', config.type)
+    lr_scheduler = get_if_implemented(torch.optim.lr_scheduler, name)
+
     if lr_scheduler is None:
-        lr_scheduler = get_module('./schedulers', name)
-    
+        try:
+            lr_scheduler = get_module('./schedulers', name)
+        except:
+            pass
+
     if lr_scheduler is None:
-        fcn = get_function('./schedulers.functional', name)
+        fcn = get_function('schedulers.functional', name)
         assert fcn, "No functional implementation of {} was found".format(name)
         fcn_wrapper = lambda e: fcn(e, **args)
-        lr_scheduler = lr_schedulers.LambdaLR(optimizer, fcn_wrapper)
+        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, fcn_wrapper)
     else:
         lr_scheduler = lr_scheduler(optimizer, **args)
 
     return lr_scheduler
-
-
-
-
-
-
