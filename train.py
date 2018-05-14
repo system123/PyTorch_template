@@ -61,10 +61,21 @@ def main(config):
 
     logger.info("INFO: Building the {} model".format(config.model.type))
     model = build_model(config.model)
+
+    m_cp_path, o_cp_path = config.get_checkpoint_path()
+
+    if config.resume_from >= 0:
+        assert m_cp_path, "Could not find a checkpoint for this model, check your config and try again"
+        model.load_state_dict(torch.load( m_cp_path ))
+
     model = model.to(config.device)
 
-    optimizer = get_optimizer(model.parameters(), config.optimizer)
     logger.info("INFO: Using {} Optimization".format(config.optimizer.type))
+    optimizer = get_optimizer(model.parameters(), config.optimizer)
+
+    if config.resume_from >= 0:
+        assert o_cp_path, "Could not find a checkpoint for the optimizer, please check your results folder"
+        optimizer.load_state_dict(torch.load( o_cp_path ))
 
     loss_fn = get_loss(config.loss)
     assert loss, "Loss function {} could not be found, please check your config".format(config.loss)
@@ -105,8 +116,8 @@ def main(config):
 
     if config.save_freq > 0:
         ch_path = config.result_path
-        ch_handler = ModelCheckpoint(config.result_path, 'checkpoint', save_interval=config.save_freq, n_saved=4, require_empty=False)
-        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, ch_handler, {'model': model})
+        ch_handler = ModelCheckpoint(config.result_path, 'checkpoint', save_interval=config.save_freq, n_saved=4, require_empty=False, save_as_state_dict=True)
+        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, ch_handler, {'model': model, 'optim': optimizer})
 
     # Register custom callbacks with the engines
     if check_if_implemented(trainer, "on_iteration_start"):
@@ -135,7 +146,7 @@ if __name__ == "__main__":
 
     config = Experiment.load_from_path(args.config)
 
-    if config.resume:
+    if config.resume_from >= 0:
         logger.warning("WARNING: --config specifies resuming, overriding config with exising experiment.")
         resume_config = Experiment(config.name, desc=config.desc, result_dir=config.result_dir).load()
         assert resume_config is not None, "No experiment {} exists, cannot resume training".format(config.name)

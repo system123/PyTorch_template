@@ -28,6 +28,12 @@ class Experiment(DotMap):
     def exists(self):
         return os.path.exists(self.result_path)
 
+    def get_checkpoint_path(self):
+        path = os.path.join(self.result_path, 'checkpoint_model_{}.pth'.format(self.resume_from))
+        model_path = path if os.path.exists(path) else None
+        optim_path = path.replace('model','optim') if model_path else None
+        return (model_path, optim_path)
+
     @staticmethod
     def load_from_path(path):
         with open(path) as f:

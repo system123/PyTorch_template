@@ -2,10 +2,10 @@
     "name": "test1",
     "desc": "Test 1 - Standard Config",
     "result_dir": "./results/",
-    "device": "cpu",
+    "device": "cuda",
     "device_ids": [0],
     "epochs": 1000,
-    "resume": false,
+    "resume_from": -1,
     "save_freq": 1,
     "verbosity": 0,
     "seed": 999,
@@ -47,10 +47,8 @@
         "min_lr": 1e-8
     },
     "monitor": {
-        "early_stopping": true,
-        "score": "acc",
-        "scale": -1,
-        "patience": 10
+        "min": "val_loss",
+        "early_stop": true
     },
     "model": {
         "type": "PseudoSiamese",

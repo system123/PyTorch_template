@@ -18,7 +18,7 @@ def get_modules(path):
                 continue
 
             modules[name] = value
-            
+
     return modules
 
 def get_function(module, fcn):
