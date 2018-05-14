@@ -1,0 +1,58 @@
+{
+    "name": "mnist",
+    "desc": "MNIST Example Project",
+    "result_dir": "./results/",
+    "device": "cuda",
+    "device_ids": [0],
+    "epochs": 10,
+    "resume_from": -1,
+    "overwrite": true,
+    "save_freq": 1,
+    "seed": 999,
+    "trainer": "DefaultTrainer",
+    "logger": "VisdomLogger",
+    "loss": "nll_loss",
+    "metrics": {
+        "acc": "CategoricalAccuracy",
+        "loss": "nll_loss"
+        },
+    "datasets": {
+        "train": {
+          "type": "MNISTDataset",
+          "data_path": "data/mnist",
+          "batch_size": 32,
+          "shuffle": true,
+          "augment": true,
+          "download": true,
+          "workers": 4
+        },
+        "validation": {
+          "type": "MNISTDataset",
+          "data_path": "data/mnist",
+          "batch_size": 32,
+          "shuffle": false,
+          "augment": true,
+          "download": false,
+          "workers": 1
+        }
+    },
+    "optimizer": {
+        "type": "SGD",
+        "lr": 0.01,
+        "momentum": 0.5
+    },
+    "scheduler": {
+        "type": "custom_scheduler",
+        "factor": 0.1,
+        "patience": 10,
+        "min_lr": 1e-8
+    },
+    "monitor": {
+        "score": "nll_loss",
+        "scale": -1,
+        "early_stop": true
+    },
+    "model": {
+        "type": "MNISTNet"
+    }
+}
