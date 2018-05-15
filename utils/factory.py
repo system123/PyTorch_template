@@ -41,7 +41,7 @@ def get_metric(name):
 
     if metric is None:
         try:
-            metric = get_module('./metrics', config.logger)
+            metric = get_module('./metrics', name)
         except:
             pass
 
@@ -63,6 +63,7 @@ def get_loss(loss_fn):
 def get_lr_scheduler(optimizer, config):
     name = config.type
     args = copy_and_delete(config.toDict(), 'type')
+    args = copy_and_delete(args, 'scheme')
 
     lr_scheduler = get_if_implemented(torch.optim.lr_scheduler, name)
 

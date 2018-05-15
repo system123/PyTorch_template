@@ -38,7 +38,7 @@ def main(config):
     dset_train = create_dataset(config.datasets.train)
     # Esnure we have a full config for validation, this means we don't need t specify everything in the config file
     # only the differences
-    config_val = config.datasets.train
+    config_val = config.datasets.train.copy()
     config_val.update(config.datasets.validation)
 
     # If the validation config has a parameter called split then we ask the training dset for the validation dataset
@@ -96,6 +96,11 @@ def main(config):
     trainer_engine = Engine(trainer.train)
     evaluator_engine = Engine(trainer.evaluate)
 
+    trainer.attach("train_loader", loader_train)
+    trainer.attach("validation_loader", loader_val)
+    trainer.attach("evaluation_engine", evaluator_engine)
+    trainer.attach("train_engine", trainer_engine)
+
     if 'metrics' in config:
         for name, metric in config.metrics.items():
             metric = get_metric(metric)
@@ -106,40 +111,48 @@ def main(config):
 
     # Register default callbacks
     if exp_logger is not None:
-        trainer_engine.add_event_handler(Events.ITERATION_COMPLETED, exp_logger.log_iteration, phase="train")
-        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, exp_logger.log_epoch, phase="train")
-        evaluator_engine.add_event_handler(Events.ITERATION_COMPLETED, exp_logger.log_iteration, phase="evaluate")
-        evaluator_engine.add_event_handler(Events.EPOCH_COMPLETED, exp_logger.log_epoch, phase="evaluate")
+        trainer_engine.add_event_handler(Events.ITERATION_COMPLETED, exp_logger.log_iteration, phase="train", model=model)
+        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, exp_logger.log_epoch, phase="train", model=model)
+        evaluator_engine.add_event_handler(Events.ITERATION_COMPLETED, exp_logger.log_iteration, phase="evaluate", model=model)
+        evaluator_engine.add_event_handler(Events.EPOCH_COMPLETED, exp_logger.log_epoch, phase="evaluate", model=model)
 
     if loader_val is not None:
         trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, lambda engine: evaluator_engine.run(loader_val))
 
     if scheduler is not None:
-        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, lambda engine: scheduler.step())
+        if config.scheduler.scheme == "batch":
+            scheduler_event = Events.ITERATION_COMPLETED
+        elif config.scheduler.scheme == "epoch":
+            scheduler_event = Events.EPOCH_COMPLETED
+        else:
+            logger.error("ERROR: Invalid scheduler scheme, must be either epoch or batch")
+            return 0
+
+        trainer_engine.add_event_handler(scheduler_event, lambda engine: scheduler.step())
 
     if config.monitor.early_stopping:
         score_fn = lambda e: config.monitor.scale * e.state.metrics[config.monitor.score]
-        es_handler = EarlyStopping(patience=config.monitor.patience, score_function=score_fn, trainer=evaluator_engine)
+        es_handler = EarlyStopping(patience=config.monitor.patience, score_function=score_fn, trainer=trainer_engine)
         evaluator_engine.add_event_handler(Events.COMPLETED, es_handler)
 
     if config.save_freq > 0:
         ch_path = config.result_path
         ch_handler = ModelCheckpoint(config.result_path, 'checkpoint', save_interval=config.save_freq, n_saved=4, require_empty=False, save_as_state_dict=True)
-        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, ch_handler, {'model': model, 'optim': optimizer})
+        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, ch_handler, {'model': model})
 
     # Register custom callbacks with the engines
     if check_if_implemented(trainer, "on_iteration_start"):
         trainer_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_iteration_start, phase="train")
         evaluator_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_iteration_start, phase="evaluate")
     if check_if_implemented(trainer, "on_iteration_end"):
-        trainer_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_iteration_end, phase="train")
-        evaluator_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_iteration_end, phase="evaluate")
+        trainer_engine.add_event_handler(Events.ITERATION_COMPLETED, trainer.on_iteration_end, phase="train")
+        evaluator_engine.add_event_handler(Events.ITERATION_COMPLETED, trainer.on_iteration_end, phase="evaluate")
     if check_if_implemented(trainer, "on_epoch_start"):
-        trainer_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_epoch_start, phase="train")
-        evaluator_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_epoch_start, phase="evaluate")
+        trainer_engine.add_event_handler(Events.EPOCH_STARTED, trainer.on_epoch_start, phase="train")
+        evaluator_engine.add_event_handler(Events.EPOCH_STARTED, trainer.on_epoch_start, phase="evaluate")
     if check_if_implemented(trainer, "on_epoch_end"):
-        trainer_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_epoch_end, phase="train")
-        evaluator_engine.add_event_handler(Events.ITERATION_STARTED, trainer.on_epoch_end, phase="evaluate")
+        trainer_engine.add_event_handler(Events.EPOCH_COMPLETED, trainer.on_epoch_end, phase="train")
+        evaluator_engine.add_event_handler(Events.EPOCH_COMPLETED, trainer.on_epoch_end, phase="evaluate")
 
     # Save the config for this experiment to the results directory, once we know the params are good
     config.save()

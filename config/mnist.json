@@ -2,9 +2,9 @@
     "name": "mnist",
     "desc": "MNIST Example Project",
     "result_dir": "./results/",
-    "device": "cuda",
+    "device": "cpu",
     "device_ids": [0],
-    "epochs": 10,
+    "epochs": 50,
     "resume_from": -1,
     "overwrite": true,
     "save_freq": 1,
@@ -20,7 +20,7 @@
         "train": {
           "type": "MNISTDataset",
           "data_path": "data/mnist",
-          "batch_size": 32,
+          "batch_size": 64,
           "shuffle": true,
           "augment": true,
           "download": true,
@@ -29,7 +29,7 @@
         "validation": {
           "type": "MNISTDataset",
           "data_path": "data/mnist",
-          "batch_size": 32,
+          "batch_size": 1000,
           "shuffle": false,
           "augment": true,
           "download": false,
@@ -38,19 +38,22 @@
     },
     "optimizer": {
         "type": "SGD",
-        "lr": 0.01,
+        "lr": 1.0,
         "momentum": 0.5
     },
     "scheduler": {
-        "type": "custom_scheduler",
-        "factor": 0.1,
-        "patience": 10,
-        "min_lr": 1e-8
+        "type": "cyclical_lr",
+        "scheme": "batch",
+        "step_sz": 2000,
+        "mode": "triangular2",
+        "max_lr": 0.1,
+        "min_lr": 0.01
     },
     "monitor": {
-        "score": "nll_loss",
+        "score": "loss",
         "scale": -1,
-        "early_stop": true
+        "early_stop": true,
+        "patience": 1
     },
     "model": {
         "type": "MNISTNet"
