@@ -131,6 +131,7 @@ def main(config):
         trainer_engine.add_event_handler(scheduler_event, lambda engine: scheduler.step())
 
     if config.monitor.early_stopping:
+        logger.info("INFO: Enabling early stopping, monitoring {}".format(config.monitor.score))
         score_fn = lambda e: config.monitor.scale * e.state.metrics[config.monitor.score]
         es_handler = EarlyStopping(patience=config.monitor.patience, score_function=score_fn, trainer=trainer_engine)
         evaluator_engine.add_event_handler(Events.COMPLETED, es_handler)

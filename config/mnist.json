@@ -2,7 +2,7 @@
     "name": "mnist",
     "desc": "MNIST Example Project",
     "result_dir": "./results/",
-    "device": "cpu",
+    "device": "cuda",
     "device_ids": [0],
     "epochs": 50,
     "resume_from": -1,
@@ -52,8 +52,8 @@
     "monitor": {
         "score": "loss",
         "scale": -1,
-        "early_stop": true,
-        "patience": 1
+        "early_stopping": true,
+        "patience": 5
     },
     "model": {
         "type": "MNISTNet"
