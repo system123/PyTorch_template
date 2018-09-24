@@ -3,6 +3,11 @@ import pkgutil
 import inspect
 import os
 import shutil
+import re
+
+def validate_config(config):
+    assert config.device in ["cpu", "cuda"], "Invalid compute device was specified. Only 'cpu' and 'cuda' are supported."
+    return True
 
 def empty_folder(path):
     if os.path.exists(path):
@@ -15,6 +20,25 @@ def empty_folder(path):
                     shutil.rmtree(file_path)
             except Exception as e:
                 pass
+
+def static_vars(**kwargs):
+    def decorate(func):
+        for k in kwargs:
+            setattr(func, k, kwargs[k])
+        return func
+    return decorate
+
+def is_float(string):
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
+
+def extract_numbers(x):
+    r = re.compile('(\d+(?:\.\d+)?)')
+    l = r.split(x)
+    return [float(y) for y in l if is_float(y)]
 
 def copy_and_delete(d, key):
     copy = d.copy()
@@ -34,6 +58,12 @@ def get_modules(path):
             modules[name] = value
 
     return modules
+
+def get_learning_rate(optimizer):
+    lr = []
+    for param_group in optimizer.param_groups:
+        lr += [ param_group['lr'] ]
+    return lr
 
 def get_function(module, fcn):
     try:

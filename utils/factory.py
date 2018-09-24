@@ -76,8 +76,8 @@ def get_lr_scheduler(optimizer, config):
     if lr_scheduler is None:
         fcn = get_function('schedulers.functional', name)
         assert fcn, "No functional implementation of {} was found".format(name)
-        fcn_wrapper = lambda e: fcn(e, **args)
-        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, fcn_wrapper)
+        fcn_wrapper = fcn(**args)
+        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [fcn_wrapper])
     else:
         lr_scheduler = lr_scheduler(optimizer, **args)
 

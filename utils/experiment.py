@@ -1,6 +1,13 @@
 from dotmap import DotMap
+from glob import glob
 import os
 import json
+
+from utils.helpers import extract_numbers
+
+def number_ordering(x):
+    n = extract_numbers(x)
+    return n[-1] if len(n) > 0 else 0
 
 class Experiment(DotMap):
     def __init__(self, name, desc="", result_dir="./results", *args, **kwargs):
@@ -29,9 +36,25 @@ class Experiment(DotMap):
         return os.path.exists(self.result_path)
 
     def get_checkpoint_path(self):
-        path = os.path.join(self.result_path, 'checkpoint_model_{}.pth'.format(self.resume_from))
-        model_path = path if os.path.exists(path) else None
-        optim_path = path.replace('model','optim') if model_path else None
+        model_path = None
+
+        if 'checkpoint' in self and len(self.checkpoint) > 0:
+            _, ext = os.path.splitext(self.checkpoint)
+
+            if ext == ".pth":
+                model_path = self.checkpoint if os.path.exists(self.checkpoint) else None
+                path = os.path.join(self.result_path, self.checkpoint) if model_path is None else model_path
+                model_path = path if os.path.exists(path) else None
+            elif self.checkpoint == "best":
+                cpts = glob(os.path.join(self.result_path, 'best_checkpoint_model*.pth'))
+                cpts = sorted(cpts, key=number_ordering)
+                if len(cpts) > 0:
+                    model_path = cpts[-1]
+            elif self.checkpoint.isdigit():
+                path = os.path.join(self.result_path, 'checkpoint_model_{}.pth'.format(self.resume_from))
+                model_path = path if os.path.exists(path) else None
+
+        optim_path = model_path.replace('model','optim') if model_path else None
         return (model_path, optim_path)
 
     @staticmethod

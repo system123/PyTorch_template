@@ -1,6 +1,8 @@
 import visdom
 import numpy as np
 
+from utils.helpers import get_learning_rate
+
 class VisdomLogger:
 
 	def __init__(self, config):
@@ -15,8 +17,10 @@ class VisdomLogger:
 		self.windows = {}
 		self.windows["evaluate"] = None
 		self.windows["train"] = None
-		self.counters = {"evaluate": 0, "train": 0}
-		self.epochs = {"evaluate": 0, "train": 0}
+		self.windows["test"] = None
+		self.counters = {"evaluate": 0, "train": 0, "test": 0}
+		self.epochs = {"evaluate": 0, "train": 0, "test": 0}
+		self.log_every = 1
 
 	def _create_plot_window(self, xlabel, ylabel, title):
 		return self.vis.line( X=np.array([1]), Y=np.array([np.nan]), \
@@ -35,26 +39,27 @@ class VisdomLogger:
 			if m in windows:
 				self.vis.line(X=np.array([iteration]), Y=np.array([v]), win=windows[m], update='append')
 
-	def log_iteration(self, engine, phase="train", model=None):
+	def log_iteration(self, engine, phase="train", model=None, optim=None):
 		metrics = engine.state.metrics
 		self.counters[phase] += 1
 
-		if self.counters[phase] >= 100:
-			# Overwrite this because we don't actually hve any metrics but we want the train loss
-			if phase == "train":
-				metrics = {'train_loss': engine.state.output}
+		# Overwrite this because we don't actually have any metrics but we want the train loss
+		if phase == "train":
+			metrics = {'train_loss': engine.state.output}
+			if optim:
+				metrics['lr'] = get_learning_rate(optim)[0]
 
-			if self.windows[phase] is None:
-				self.windows[phase] = self._create_plot_windows(metrics, title=phase.capitalize())
+		if self.windows[phase] is None:
+			self.windows[phase] = self._create_plot_windows(metrics, title=phase.capitalize())
 
+		if self.counters[phase] % self.log_every == 0:
 			if len(self.windows[phase]) > 0:
 				self._plot_metrics(engine.state.iteration, metrics, self.windows[phase])
 
-			self.counters[phase] = 0
 
-	def log_epoch(self, engine, phase="train", model=None):
+	def log_epoch(self, engine, phase="train", model=None, optim=None):
 		if self.windows[phase] is None:
-				self.windows[phase] = self._create_plot_windows(engine.state.metrics, title=phase.capitalize())
+			self.windows[phase] = self._create_plot_windows(engine.state.metrics, title=phase.capitalize())
 
 		self._plot_metrics(self.epochs[phase], engine.state.metrics, self.windows[phase])
 
@@ -62,4 +67,3 @@ class VisdomLogger:
 			self.epochs[phase] += 1
 		else:
 			self.epochs[phase] = engine.state.epoch
-
